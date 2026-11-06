@@ -111,7 +111,7 @@
         <tr>
           <th scope="col"><button data-sort="mois" class="sort" data-tip="Mois estimé de la prochaine élection du CSE. Cliquez pour trier.">Élection</button></th>
           <th scope="col"><button data-sort="entreprise" class="sort" data-tip="Nom de l'établissement, sa ville et son secteur. Cliquez pour trier par nom.">Établissement</button></th>
-          <th scope="col" class="num"><button data-sort="inscrits" class="sort" data-tip="Nombre de salariés inscrits pour voter à la dernière élection : plus il est grand, plus le CSE a d'élus à former.">Électeurs</button></th>
+          <th scope="col" class="num"><button data-sort="inscrits" class="sort" data-tip="Nombre de salariés électeurs : plus il est grand, plus le CSE a d'élus à former.">Électeurs</button></th>
           <th scope="col"><span class="th" data-tip="Numéro du standard de l'entreprise. Cliquez pour appeler, ou sur l'icône pour copier.">Standard</span></th>
           <th scope="col"><span class="th" data-tip="Votre note personnelle sur où vous en êtes. Visible par vous seul.">Mon suivi</span></th>
         </tr>
@@ -126,12 +126,7 @@
   </section>
 
   <footer class="foot">
-    <details>
-      <summary>Comment le mois est calculé</summary>
-      <p>Chaque établissement a déposé un procès-verbal d'élection du CSE auprès du ministère du Travail. Le mois affiché = date du dernier scrutin + durée du mandat (4 ans en général). C'est une estimation : un accord d'entreprise peut raccourcir le mandat, et l'élection est souvent préparée un à trois mois avant.</p>
-      <p>Les coordonnées sont celles de l'entreprise (standard, email générique, site), relevées sur des sources publiques. Aucune donnée personnelle d'élu n'est fournie. Le suivi et les notes restent dans ce navigateur : exportez-les pour les garder ailleurs.</p>
-    </details>
-    <p class="muted">Données au <span id="gen"></span> · Sources : PV des élections professionnelles (ministère du Travail), API Recherche d'entreprises, sites des entreprises · <button class="link" id="logout" type="button" data-tip="Le code sera redemandé à la prochaine visite. Votre suivi reste enregistré.">Verrouiller cet appareil</button></p>
+    <p class="muted">Données au <span id="gen"></span> · <button class="link" id="logout" type="button" data-tip="Le code sera redemandé à la prochaine visite. Votre suivi reste enregistré.">Verrouiller cet appareil</button></p>
   </footer>
 </div>
 

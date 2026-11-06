@@ -249,7 +249,7 @@ function render() {
   $("#rows").innerHTML = rows.map((r) => {
     const s = statusOf(r);
     return `<tr data-siret="${r.siret}" class="${s === "ecarte" || s === "client" ? "is-dim" : ""}" tabindex="0">
-      <td class="c-when"><div class="when ${isSoon(r.mois) ? "soon" : ""}" data-tip="Élection estimée en ${monthLabel(r.mois)} (dernier vote le ${fmtDate(r.scrutin)} + mandat de ${r.mandat || 4} ans)."><b>${capital(monthLabel(r.mois))}</b><span>${untilLabel(r.mois)}</span></div></td>
+      <td class="c-when"><div class="when ${isSoon(r.mois) ? "soon" : ""}" data-tip="Élection estimée en ${monthLabel(r.mois)}."><b>${capital(monthLabel(r.mois))}</b><span>${untilLabel(r.mois)}</span></div></td>
       <td class="c-co"><div class="co" data-tip="Cliquez sur la ligne pour ouvrir la fiche complète : contacts, notes, rappel agenda."><b>${esc(r.entreprise)}</b><span>${esc(capital(r.ville.toLowerCase()))} · ${esc(r.secteur)}</span></div></td>
       <td class="c-size num" data-tip="${r.inscrits} salariés inscrits pour voter au CSE · effectif ${esc(r.effectif)} salariés.">${r.inscrits}<span class="size">${esc(r.effectif)} sal.</span></td>
       <td class="c-tel">${r.tel
@@ -278,7 +278,7 @@ function openPanel(siret) {
     </div>
     <div class="p-date ${isSoon(r.mois) ? "soon" : ""}">
       <b>Élection estimée : ${monthLabel(r.mois)}</b>
-      <span>${capital(untilLabel(r.mois))} · dernier scrutin le ${fmtDate(r.scrutin)}${r.mandat ? `, mandat de ${r.mandat} ans` : ""}</span>
+      <span>${capital(untilLabel(r.mois))}</span>
     </div>
     <div class="p-sec">
       <h3 data-tip="Une simple note pour vous souvenir de ce qui est fait ou pas. Rien n'est envoyé à l'entreprise ni à personne.">Mon suivi <span class="muted" style="font-weight:400">· note perso, visible par vous seul</span></h3>
@@ -299,7 +299,7 @@ function openPanel(siret) {
     <div class="p-sec">
       <h3>Établissement</h3>
       <dl class="facts">
-        <dt data-tip="Salariés inscrits pour voter à la dernière élection du CSE.">Électeurs inscrits</dt><dd>${r.inscrits}</dd>
+        <dt data-tip="Nombre de salariés électeurs du CSE.">Électeurs inscrits</dt><dd>${r.inscrits}</dd>
         <dt>Effectif</dt><dd>${esc(r.effectif)} salariés</dd>
         ${r.dirigeant ? `<dt data-tip="Dirigeant déclaré au registre officiel des entreprises (donnée publique).">Dirigeant publié</dt><dd>${esc(r.dirigeant)}</dd>` : ""}
         <dt data-tip="Code officiel de l'activité principale de l'entreprise.">Code NAF</dt><dd>${esc(r.naf)}</dd>
@@ -407,7 +407,6 @@ function exportRows() {
     "NAF": r.naf,
     "Effectif": r.effectif,
     "Électeurs inscrits": r.inscrits,
-    "Dernier scrutin": fmtDate(r.scrutin),
     "Standard": fmtTel(r.tel),
     "Email": r.email,
     "Site": r.site,
