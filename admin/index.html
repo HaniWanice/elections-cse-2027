@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>Retours clients · Hani Wanice</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  .adm { max-width: 60rem; margin: 0 auto; padding: 1.5rem clamp(1rem, 3vw, 2rem) 3rem; }
+  .adm-grid { display: grid; grid-template-columns: 15rem 1fr; gap: 1rem; margin-top: 1.25rem; }
+  .clients { display: grid; gap: .4rem; align-content: start; }
+  .client { all: unset; cursor: pointer; padding: .7rem .85rem; border-radius: 10px; border: 1px solid var(--line); background: var(--raised); display: grid; gap: .1rem; }
+  .client[aria-pressed=true] { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+  .client small { font-size: .75rem; opacity: .75; }
+  .client .badge { justify-self: start; background: var(--stamp); color: #fff; border-radius: 999px; padding: 0 .45rem; font-size: .75rem; font-weight: 600; }
+  .thread { background: var(--raised); border: 1px solid var(--line); border-radius: 12px; display: flex; flex-direction: column; height: 70dvh; }
+  .thread .fb-log { flex: 1; }
+  .thread-head { padding: .85rem 1rem; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 1rem; align-items: center; }
+  .thread .fb-msg.me { justify-self: start; background: var(--ground); color: var(--ink); border-radius: 12px 12px 12px 4px; }
+  .thread .fb-msg.them { justify-self: end; background: var(--ink); color: var(--ground); border-radius: 12px 12px 4px 12px; }
+  @media (max-width: 760px) { .adm-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main id="lock" class="lock">
+  <form id="lockForm" class="lock-card">
+    <h1>Retours clients</h1>
+    <p class="muted">Page réservée à l'équipe.</p>
+    <input type="text" name="username" value="admin" autocomplete="username" hidden>
+    <label for="pw" class="lbl">Code admin</label>
+    <input id="pw" type="password" autocomplete="current-password" required autofocus>
+    <p id="lockErr" class="err" hidden>Code incorrect.</p>
+    <button class="btn primary" type="submit">Ouvrir</button>
+  </form>
+</main>
+
+<div class="adm" id="app" hidden>
+  <header class="top">
+    <div><p class="brand-name">Hani Wanice</p><h1>Retours des clients sur leur site</h1></div>
+    <p class="summary">Messages en direct. Ce que vous écrivez ici apparaît dans la bulle du client.</p>
+  </header>
+  <div class="adm-grid">
+    <nav class="clients" id="clients"></nav>
+    <section class="thread">
+      <div class="thread-head"><b id="tName"></b><a id="tUrl" target="_blank" rel="noopener" class="muted"></a></div>
+      <div class="fb-log" id="log"></div>
+      <form class="fb-form" id="form">
+        <textarea id="text" rows="2" placeholder="Répondre au client…" required></textarea>
+        <button class="btn primary" type="submit">Envoyer</button>
+      </form>
+    </section>
+  </div>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="data.js"></script>
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+const KEY = "cse27.admin.key", HIST = "cse27.admin.hist";
+let CLIENTS = [], cur = null;
+// ntfy keeps messages ~12 h: the history is also kept in this browser.
+let hist = JSON.parse(localStorage.getItem(HIST) || "{}");
+const unread = {};
+
+async function decryptWith(key) {
+  const p = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64(ENC.iv) }, key, b64(ENC.ct));
+  return JSON.parse(new TextDecoder().decode(p));
+}
+async function unlock(pw) {
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]);
+  const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: b64(ENC.salt), iterations: ENC.iter, hash: "SHA-256" },
+    base, { name: "AES-GCM", length: 256 }, true, ["decrypt"]);
+  const data = await decryptWith(key);
+  const raw = new Uint8Array(await crypto.subtle.exportKey("raw", key));
+  localStorage.setItem(KEY, btoa(String.fromCharCode(...raw)));
+  return data;
+}
+function toast(m) { const t = $("#toast"); t.textContent = m; t.classList.add("on"); setTimeout(() => t.classList.remove("on"), 1800); }
+
+function add(cid, msg) {
+  const list = hist[cid] || (hist[cid] = []);
+  if (list.some((m) => m.id === msg.id)) return false;
+  list.push(msg); list.sort((a, b) => a.t - b.t);
+  localStorage.setItem(HIST, JSON.stringify(hist));
+  return true;
+}
+
+function renderClients() {
+  $("#clients").innerHTML = CLIENTS.map((c) => {
+    const last = (hist[c.id] || []).slice(-1)[0];
+    return `<button class="client" data-id="${c.id}" aria-pressed="${cur === c.id}"><b>${esc(c.name)}</b>
+      <small>${last ? esc(last.text.slice(0, 40)) : "Aucun message"}</small>${unread[c.id] ? `<span class="badge">${unread[c.id]}</span>` : ""}</button>`;
+  }).join("");
+}
+function renderThread() {
+  const c = CLIENTS.find((x) => x.id === cur);
+  $("#tName").textContent = c.name;
+  $("#tUrl").href = c.url; $("#tUrl").textContent = "Ouvrir son site";
+  const list = hist[cur] || [];
+  $("#log").innerHTML = list.length ? list.map((m) => `<div class="fb-msg ${m.from === "client" ? "me" : "them"}"><p>${esc(m.text)}</p>
+    <time>${m.from === "client" ? esc(c.name) : "Vous"} · ${new Date(m.t).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</time></div>`).join("")
+    : `<p class="muted">Pas encore de message de ${esc(c.name)}.</p>`;
+  $("#log").scrollTop = $("#log").scrollHeight;
+}
+
+function start(data) {
+  CLIENTS = data.clients; cur = CLIENTS[0].id;
+  $("#lock").hidden = true; $("#app").hidden = false;
+  renderClients(); renderThread();
+  const byTopic = {};
+  CLIENTS.forEach((c) => { byTopic[c.in] = [c.id, "client"]; byTopic[c.out] = [c.id, "team"]; });
+  const all = CLIENTS.flatMap((c) => [c.in, c.out]).join(",");
+  const es = new EventSource(`https://ntfy.sh/${all}/sse?since=all`);
+  es.onmessage = (ev) => {
+    const d = JSON.parse(ev.data);
+    if (d.event !== "message") return;
+    const [cid, from] = byTopic[d.topic] || [];
+    if (!cid || !add(cid, { id: d.id, from, text: d.message, t: d.time * 1000 })) return;
+    if (from === "client" && cid !== cur) unread[cid] = (unread[cid] || 0) + 1;
+    renderClients(); if (cid === cur) renderThread();
+  };
+}
+
+$("#clients").addEventListener("click", (e) => {
+  const b = e.target.closest(".client"); if (!b) return;
+  cur = b.dataset.id; unread[cur] = 0; renderClients(); renderThread();
+});
+$("#text").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#form").requestSubmit(); } });
+$("#form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const text = $("#text").value.trim(); if (!text) return;
+  const c = CLIENTS.find((x) => x.id === cur);
+  try {
+    const r = await fetch(`https://ntfy.sh/${c.out}`, { method: "POST", body: text });
+    if (!r.ok) throw 0;
+    $("#text").value = "";
+  } catch { toast("Envoi impossible, réessayez"); }
+});
+$("#lockForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  try { start(await unlock($("#pw").value.trim())); } catch { $("#lockErr").hidden = false; }
+});
+(async () => {
+  const raw = localStorage.getItem(KEY);
+  if (!raw) return;
+  try {
+    const key = await crypto.subtle.importKey("raw", b64(raw), "AES-GCM", true, ["decrypt"]);
+    start(await decryptWith(key));
+  } catch { localStorage.removeItem(KEY); }
+})();
+</script>
+</body>
+</html>
