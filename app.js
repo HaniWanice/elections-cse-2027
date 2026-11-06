@@ -154,6 +154,7 @@ async function copy(text, msg) {
 /* ---------- Render ---------- */
 
 function start(data) {
+  window.hwTrack?.("unlock");
   ROWS = data.rows;
   GENERATED = data.generated;
   CHAT = data.chat || null;
